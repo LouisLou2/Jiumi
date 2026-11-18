@@ -15,7 +15,7 @@ import org.json.JSONObject
 
 /** What the user may do to an app; [id] is what the monitor and the action log call it. */
 enum class ManageAction(val id: String) {
-    DISABLE("disable"), ENABLE("enable"), UNINSTALL("uninstall"), REMOVE("remove"), RESTORE("restore"),
+    DISABLE("disable"), ENABLE("enable"), FORCE_STOP("force_stop"), UNINSTALL("uninstall"), REMOVE("remove"), RESTORE("restore"),
     /** Installs a deleted app again from its backup. */
     REINSTALL("reinstall");
 
@@ -39,8 +39,8 @@ data class PackageFacts(
     /** Installed for this user; a preinstalled app removed for the user is not. */
     val installed: Boolean,
     /**
-     * Turned off by the user (not by the phone maker's defaults): disabled, or suspended from here on a
-     * phone that refuses to disable system packages.
+     * Turned off by the user (not by the phone maker's defaults). Also covers legacy Jiumi suspensions
+     * so that they can still be lifted through Enable.
      */
     val disabledByUser: Boolean,
     /** Has code of its own; resource overlays and the like have none and are not apps to manage. */
@@ -120,7 +120,7 @@ object Management {
         !f.installed -> if (f.preinstalled) listOf(ManageAction.RESTORE) else emptyList()
         f.disabledByUser -> listOfNotNull(ManageAction.ENABLE,
             if (!f.preinstalled) ManageAction.UNINSTALL else ManageAction.REMOVE.takeIf { allowRemove })
-        else -> listOfNotNull(ManageAction.DISABLE,
+        else -> listOfNotNull(ManageAction.DISABLE, ManageAction.FORCE_STOP.takeIf { f.hasCode },
             if (!f.preinstalled) ManageAction.UNINSTALL else ManageAction.REMOVE.takeIf { allowRemove })
     }
 

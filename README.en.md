@@ -44,11 +44,12 @@ Apps are grouped by source. Open an app's details to review its activity and dec
 
 | Action | What happens |
 | --- | --- |
-| Disable or enable | Disabling keeps the app's data. You can enable it again under Apps › Disabled. If the system refuses to disable it, Jiumi will try to suspend and stop it. |
+| Disable or enable | Disabling keeps the app's data. You can enable it again under Apps › Disabled. If the system refuses to disable it, Jiumi reports failure without suspending or force stopping the app. |
+| Force stop | Available as a separate action for eligible apps. It stops the app without disabling it and only shows a notice on failure. |
 | Delete an app you installed | Enter the full package name to confirm. Jiumi backs up the APKs before uninstalling. You can try to reinstall the app from Apps › Deleted. **Uninstalling deletes app data. The backup can only restore the installation files.** |
 | Remove a preinstalled app | Enable the option in advanced settings to remove supported preinstalled apps for the current user. The system copy and app data are kept, and you can try to restore the app from Apps › Deleted. |
 
-Core system components are protected by default. Changing a component the phone depends on can affect system features. Jiumi displays a warning before such changes.
+Core system components are protected by default. Changing a component the phone depends on can affect system features. The app details show a warning.
 
 ## How does Jiumi see background activity without root?
 

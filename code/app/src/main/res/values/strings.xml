@@ -435,11 +435,13 @@
     <string name="state_removed">Removed</string>
     <string name="section_advanced">Advanced</string>
     <string name="manage_action_disable">Disable</string>
+    <string name="manage_action_force_stop">Force stop</string>
     <string name="manage_action_enable">Enable</string>
     <string name="manage_action_uninstall">Delete</string>
     <string name="manage_action_remove">Remove for this user</string>
     <string name="manage_action_restore">Restore</string>
     <string name="manage_done_disable">Disable the app</string>
+    <string name="manage_done_force_stop">Force stop the app</string>
     <string name="manage_done_enable">Enable the app</string>
     <string name="manage_done_uninstall">Delete the app</string>
     <string name="manage_done_remove">Remove the preinstalled app</string>
@@ -458,6 +460,11 @@
     <string name="confirm_remove_body">This preinstalled app is removed for this user only; its data stays and you can restore it under Apps › Deleted.</string>
     <string name="confirm_uninstall_title">Delete “%1$s”?</string>
     <string name="confirm_uninstall_body">Its installation files are backed up first, so you can restore it under Apps › Deleted; but its data (chats, sign-ins and so on) is deleted with it and can\'t be brought back. Type the package name to confirm:</string>
+    <string name="manage_disable_failed">Couldn\'t disable the app</string>
+    <string name="manage_force_stop_failed">Couldn\'t force stop the app</string>
+    <string name="manage_process_present">Running process detected</string>
+    <string name="manage_process_absent">No running process detected</string>
+    <string name="manage_process_unknown">Process status unavailable</string>
     <string name="manage_failed">The system did not carry this out</string>
     <string name="settings_allow_remove">Allow removing preinstalled apps</string>
     <string name="apps_filter_disabled">Disabled</string>
@@ -516,7 +523,7 @@
     <string name="risk_listed">Other apps or system features rely on it (push messages, the app store, calls, storage). Turning it off or removing it may break them, and some apps may crash.</string>
     <string name="risk_background">This is a preinstalled component with no launcher icon, usually supporting a phone feature in the background. That feature may stop working.</string>
     <string name="risk_acknowledge">I understand the risk and want to continue</string>
-    <string name="risk_note">The phone relies on this app; you will be warned before changing it.</string>
+    <string name="risk_note">The phone relies on this app. Changing it may affect system features.</string>
     <string name="remove_hint">To remove preinstalled apps, allow it in Settings › Advanced first.</string>
     <string name="settings_allow_remove_desc">Removes apps that came with the phone for this user only; data is kept, and Apps › Deleted brings them back.</string>
     <string name="allow_remove_title">Allow removing preinstalled apps?</string>

@@ -3,6 +3,7 @@
 
 package com.ybblab.jiumi.probe
 
+import android.app.ActivityManager
 import android.content.Context
 import android.os.Binder
 import android.os.Handler
@@ -157,6 +158,26 @@ internal class ProbeService(
         }
     }
 
+    override fun packageProcessState(packageName: String): Int {
+        enforceOwner()
+        require(PACKAGE_NAME.matches(packageName)) { "not a package name" }
+        val user = Binder.getCallingUid() / PER_USER_RANGE
+        val token = Binder.clearCallingIdentity()
+        val processes = try {
+            runCatching { context.getSystemService(ActivityManager::class.java)?.runningAppProcesses }.getOrNull()
+        } finally {
+            Binder.restoreCallingIdentity(token)
+        } ?: return ProbeProtocol.PROCESS_UNKNOWN
+        // Use Android's package membership, not UID or process name alone (shared UIDs and :services).
+        if (processes.any { it.uid / PER_USER_RANGE == user && it.pkgList?.contains(packageName) == true }) {
+            return ProbeProtocol.PROCESS_PRESENT
+        }
+        // If even the app making this request is invisible, don't turn a limited snapshot into "not running".
+        return if (processes.any { it.uid == ownerUid && it.pkgList?.contains(this.packageName) == true }) {
+            ProbeProtocol.PROCESS_ABSENT
+        } else ProbeProtocol.PROCESS_UNKNOWN
+    }
+
     override fun managePackage(action: String, packageName: String): String {
         enforceOwner()
         // The app decides what may be changed; the monitor only refuses what is never a target.
@@ -166,6 +187,7 @@ internal class ProbeService(
         val command = when (action) {
             "disable" -> return disable(user, packageName)
             "enable" -> return enable(user, packageName)
+            "force_stop" -> return forceStop(user, packageName)
             "uninstall" -> listOf("pm", "uninstall", packageName)
             "remove" -> listOf("pm", "uninstall", "-k", "--user", "$user", packageName)
             "restore" -> listOf("cmd", "package", "install-existing", "--user", "$user", packageName)
@@ -178,8 +200,8 @@ internal class ProbeService(
         return manageResult(ok, output)
     }
 
-    private fun manageResult(ok: Boolean, output: String, method: String? = null) =
-        JSONObject().put("ok", ok).put("output", output.take(MAX_OUTPUT)).apply { method?.let { put("method", it) } }.toString()
+    private fun manageResult(ok: Boolean, output: String) =
+        JSONObject().put("ok", ok).put("output", output.take(MAX_OUTPUT)).toString()
 
     /** Runs a package command; pm prints "Success" or the new state, and a failure exits non-zero or names it. */
     private fun runPm(command: List<String>): Pair<Boolean, String> {
@@ -191,20 +213,26 @@ internal class ProbeService(
         return ok to output
     }
 
-    /**
-     * Turns the app off. Some phones refuse to disable any system package, even for the shell; such an
-     * app is suspended instead and stopped, so it cannot open, show notifications or start again on its own.
-     */
     private fun disable(user: Int, pkg: String): String {
-        val (disabled, refusal) = runPm(listOf("pm", "disable-user", "--user", "$user", pkg))
-        if (disabled) return manageResult(true, refusal, "disable")
-        val (suspended, output) = runPm(listOf("pm", "suspend", "--user", "$user", pkg))
-        if (!suspended || !output.contains("suspended state: true")) return manageResult(false, "$refusal\n$output")
-        runPm(listOf("am", "force-stop", "--user", "$user", pkg))
-        return manageResult(true, output, "suspend")
+        val (ok, output) = runPm(listOf("pm", "disable-user", "--user", "$user", pkg))
+        val disabled = output.lineSequence().any { it.trim() == "Package $pkg new state: disabled-user" }
+        return manageResult(ok && disabled, output)
     }
 
-    /** Turns the app back on: lifts a suspension made from here, then enables it if it was disabled. */
+    private fun forceStop(user: Int, pkg: String): String {
+        val (ok, output) = runPm(listOf("am", "force-stop", "--user", "$user", pkg))
+        if (!ok) return manageResult(false, output)
+        // Activity Manager can return no error even when it leaves a protected app alone.
+        val dump = runCatching { Shell.run(listOf("dumpsys", "package", pkg)) }.getOrNull()
+        val state = dump?.takeIf { it.exitCode == 0 }?.output?.lineSequence()?.map(String::trim)
+            ?.dropWhile { !it.startsWith("Package [$pkg] (") }?.drop(1)
+            ?.takeWhile { !it.startsWith("Package [") }
+            ?.firstOrNull { it.startsWith("User $user: ") && " installed=true " in it }
+        val stopped = state?.split(' ')?.contains("stopped=true") == true
+        return manageResult(stopped, if (stopped) output else "Could not verify the package's stopped state")
+    }
+
+    /** Lifts a legacy Jiumi suspension, then enables the app if it was disabled. */
     private fun enable(user: Int, pkg: String): String {
         val (_, lifted) = runPm(listOf("pm", "unsuspend", "--user", "$user", pkg))
         val disabled = Shell.run(listOf("pm", "list", "packages", "-d", "--user", "$user", pkg), timeoutMs = 30_000).output
@@ -286,7 +314,7 @@ internal class ProbeService(
 
     /**
      * From `dumpsys package packages`: each package's first install time in ms (the first user's when
-     * several), and the packages the shell suspended for [user], as [disable] does where disabling is refused.
+     * several), and the packages the shell suspended for [user], including legacy Jiumi suspensions.
      */
     private fun packageDump(dump: String, user: Int): PackageDump {
         val format = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)

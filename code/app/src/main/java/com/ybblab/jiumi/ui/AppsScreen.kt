@@ -336,6 +336,7 @@ private fun CardSlice(first: Boolean, last: Boolean, content: @Composable () -> 
 /** What a button that carries out [action] says. */
 fun actionLabel(action: ManageAction): Int = when (action) {
     ManageAction.DISABLE -> R.string.manage_action_disable
+    ManageAction.FORCE_STOP -> R.string.manage_action_force_stop
     ManageAction.ENABLE -> R.string.manage_action_enable
     ManageAction.UNINSTALL -> R.string.manage_action_uninstall
     ManageAction.REMOVE -> R.string.manage_action_remove

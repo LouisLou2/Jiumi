@@ -3,6 +3,7 @@
 
 package com.ybblab.jiumi.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -34,18 +36,24 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.ybblab.jiumi.MonitorController
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.Arrangement
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import com.ybblab.jiumi.data.Refusal
 import com.ybblab.jiumi.data.Management
@@ -378,23 +386,58 @@ private fun DomainRow(d: com.ybblab.jiumi.data.DomainSummary) {
 private const val DESTINATIONS_SHOWN = 8
 
 /**
- * The app's actions as a row of buttons: disable or enable, delete; restore or discard the backup of
- * a deleted app. Disabling, removing, deleting and discarding ask first; undoing asks nothing. An
- * app left alone says why instead.
+ * The app's actions as a row of buttons. Disabling, removing, deleting and discarding ask first;
+ * force-stopping and undoing ask nothing. An app left alone says why instead.
  */
 @Composable
 private fun ManageBar(controller: MonitorController, m: MonitorController.Managed, name: String, monitorRunning: Boolean,
                       onDiscarded: () -> Unit) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val disableFailed = stringResource(R.string.manage_disable_failed)
+    val forceStopFailed = stringResource(R.string.manage_force_stop_failed)
     var asking by rememberSaveable(m.pkg) { mutableStateOf<String?>(null) }
     var outcome by rememberSaveable(m.pkg) { mutableStateOf<MonitorController.ManageResult?>(null) }
     var working by remember(m.pkg) { mutableStateOf(false) }
-    // The buttons always answer; a monitor that is not running is started on the way.
+    val offersForceStop = ManageAction.FORCE_STOP in m.actions
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var hasRunningProcess by remember(m.pkg) { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(m.pkg, offersForceStop, lifecycle, monitorRunning, working) {
+        if (!offersForceStop || working) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (isActive) {
+                hasRunningProcess = controller.hasRunningProcess(m.pkg)
+                delay(PROCESS_STATUS_REFRESH_MS)
+            }
+        }
+    }
+    // An action can start the monitor if it is not already running; reading status does not.
     val run = { action: ManageAction ->
         asking = null
         working = true
         outcome = null
-        scope.launch { outcome = controller.manage(m.pkg, action); working = false }
+        scope.launch {
+            try {
+                val result = controller.manage(m.pkg, action)
+                val failureToast = when (action) {
+                    ManageAction.DISABLE -> disableFailed
+                    ManageAction.FORCE_STOP -> forceStopFailed
+                    else -> null
+                }
+                if (failureToast != null) {
+                    if (result != MonitorController.ManageResult.DONE) {
+                        Toast.makeText(context, failureToast, Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    outcome = result
+                }
+                if (action == ManageAction.FORCE_STOP) {
+                    hasRunningProcess = controller.hasRunningProcess(m.pkg)
+                }
+            } finally {
+                working = false
+            }
+        }
         Unit
     }
     // A deleted app's backup can also be thrown away.
@@ -403,9 +446,11 @@ private fun ManageBar(controller: MonitorController, m: MonitorController.Manage
         if (m.actions.isNotEmpty() || discard) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 m.actions.forEach { action ->
-                    ManageButton(stringResource(actionLabel(action)), actionIcon(action), actionTone(action), enabled = !working,
+                    val enabled = !working && (action != ManageAction.FORCE_STOP || hasRunningProcess != false)
+                    ManageButton(stringResource(actionLabel(action)), actionIcon(action), actionTone(action), enabled,
                         Modifier.weight(1f)) {
-                        if (Management.isUndo(action)) run(action) else asking = action.id
+                        if (Management.isUndo(action) || action == ManageAction.FORCE_STOP) run(action)
+                        else asking = action.id
                     }
                 }
                 if (discard) ManageButton(stringResource(R.string.manage_action_discard), JiumiIcons.Trash, Tone.DANGER,
@@ -413,6 +458,18 @@ private fun ManageBar(controller: MonitorController, m: MonitorController.Manage
                     asking = DISCARD
                 }
             }
+        }
+        if (offersForceStop && !working) {
+            Text(
+                stringResource(when (hasRunningProcess) {
+                    true -> R.string.manage_process_present
+                    false -> R.string.manage_process_absent
+                    null -> R.string.manage_process_unknown
+                }),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+            )
         }
         val failed = !working && (outcome == MonitorController.ManageResult.FAILED || outcome == MonitorController.ManageResult.NO_MONITOR)
         val note = when {
@@ -444,6 +501,7 @@ private fun ManageBar(controller: MonitorController, m: MonitorController.Manage
     }
 }
 
+private const val PROCESS_STATUS_REFRESH_MS = 3_000L
 private const val DISCARD = "discard"
 
 /**
@@ -461,6 +519,7 @@ private fun actionIcon(action: ManageAction) = when (action) {
     ManageAction.ENABLE -> JiumiIcons.Play
     ManageAction.RESTORE, ManageAction.REINSTALL -> JiumiIcons.Undo
     ManageAction.DISABLE -> JiumiIcons.Ban
+    ManageAction.FORCE_STOP -> JiumiIcons.Stop
     ManageAction.UNINSTALL, ManageAction.REMOVE -> JiumiIcons.Trash
 }
 

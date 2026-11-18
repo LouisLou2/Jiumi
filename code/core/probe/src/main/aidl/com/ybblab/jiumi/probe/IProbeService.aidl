@@ -31,18 +31,17 @@ interface IProbeService {
     String footprint();
     void shutdown();
     /**
-     * Changes an installed package for the calling user: action "disable", "enable", "uninstall"
-     * (removes it and its data), "remove" (a preinstalled app, for this user only), "restore"
-     * (brings a removed preinstalled app back) or "reinstall" (installs the APKs the app backed up
-     * under its external files, backups/<packageName>/). Returns JSON {"ok":bool,"output":text}, with
-     * "method" "disable" or "suspend" for "disable": a phone that refuses to disable a system package has
-     * it suspended and stopped instead, which "enable" lifts.
+     * Changes an installed package for the calling user: action "disable" (no fallback), "enable"
+     * (also lifts legacy suspensions), "force_stop", "uninstall" (removes it and its data), "remove"
+     * (a preinstalled app, for this user only), "restore" (brings a removed preinstalled app back)
+     * or "reinstall" (installs the APKs the app backed up under its external files, backups/<packageName>/).
+     * Returns JSON {"ok":bool,"output":text}.
      */
     String managePackage(String action, String packageName);
     /**
      * Every package for the calling user as the shell sees it, which some phones hide from apps.
      * JSON {"packages":[{"pkg":name,"uid":n,"system":bool,"disabled":bool,"suspended":bool,"installed":bool}]};
-     * "suspended" only for a suspension made by the shell, as "disable" makes.
+     * "suspended" only for a suspension made by the shell (including from older versions).
      */
     String listPackages();
     /**
@@ -58,4 +57,6 @@ interface IProbeService {
     String alarmWakeups(String packageName);
     /** Reads or changes a single installed app’s access. Returns verified state and operation results. */
     String appAccess(String packageName, int uid, String action, String permission);
+    /** Snapshot for the calling user: 1 = process found, 0 = none found, -1 = unavailable. */
+    int packageProcessState(String packageName);
 }

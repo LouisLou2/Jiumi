@@ -36,6 +36,7 @@ import com.ybblab.jiumi.data.NetworkUsage
 import com.ybblab.jiumi.data.AppKinds
 import com.ybblab.jiumi.data.AttentionRules
 import com.ybblab.jiumi.probe.ProbeClient
+import com.ybblab.jiumi.probe.ProbeProtocol
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -275,6 +276,16 @@ class MonitorController(
         val service = probe.service.value ?: return@withContext null
         runCatching { service.alarmWakeups(pkg) }.getOrNull()
             ?.let { com.ybblab.jiumi.data.Wakeups.parse(it, pkg, System.currentTimeMillis()) }
+    }
+
+    /** Whether a process hosts this package now. Null if the running monitor cannot tell. */
+    suspend fun hasRunningProcess(pkg: String): Boolean? = withContext(Dispatchers.IO) {
+        val service = probe.service.value ?: return@withContext null
+        when (runCatching { service.packageProcessState(pkg) }.getOrNull()) {
+            ProbeProtocol.PROCESS_PRESENT -> true
+            ProbeProtocol.PROCESS_ABSENT -> false
+            else -> null
+        }
     }
 
     /** How a management action ended. */

@@ -5,7 +5,11 @@ package com.ybblab.jiumi.probe
 
 /** Contract shared by the app and the shell-identity monitor started from the same APK. */
 object ProbeProtocol {
-    const val VERSION = 13
+    // Do not reuse an older monitor that still falls back to suspension when disabling fails.
+    const val VERSION = 15
+    const val PROCESS_UNKNOWN = -1
+    const val PROCESS_ABSENT = 0
+    const val PROCESS_PRESENT = 1
     const val SHELL_UID = 2000
     const val MAIN_CLASS = "com.ybblab.jiumi.probe.ProbeMain"
     const val PROCESS_NAME = "jiumi_probe"

@@ -4,6 +4,10 @@ Notable changes to Jiumi, newest first. The English in-app update notes come fro
 Chinese in-app notes are supplied when preparing the release.
 Versions follow [Semantic Versioning](https://semver.org).
 
+## [Unreleased]
+
+- Disabling an app no longer falls back to suspension. Eligible apps have a separate Force stop action; both actions only show a toast on failure. The app details show whether its process is running and gray out Force stop when none is detected.
+
 ## [0.2.1]
 
 - Streamlined setup for root and Shizuku, with clearer authorization steps.

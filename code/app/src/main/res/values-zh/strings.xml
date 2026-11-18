@@ -428,11 +428,13 @@
     <string name="state_removed">已移除</string>
     <string name="section_advanced">高级</string>
     <string name="manage_action_disable">停用</string>
+    <string name="manage_action_force_stop">强制停止</string>
     <string name="manage_action_enable">启用</string>
     <string name="manage_action_uninstall">删除</string>
     <string name="manage_action_remove">为当前用户移除</string>
     <string name="manage_action_restore">恢复</string>
     <string name="manage_done_disable">停用应用</string>
+    <string name="manage_done_force_stop">强制停止应用</string>
     <string name="manage_done_enable">启用应用</string>
     <string name="manage_done_uninstall">删除应用</string>
     <string name="manage_done_remove">移除预装应用</string>
@@ -451,6 +453,11 @@
     <string name="confirm_remove_body">只为当前用户移除这个预装应用，数据保留，可以在「应用 › 已删除」里恢复。</string>
     <string name="confirm_uninstall_title">删除「%1$s」？</string>
     <string name="confirm_uninstall_body">删除前会备份安装包，之后可以在「应用 › 已删除」里恢复；但应用数据（聊天记录、登录状态等）会一起删除，无法恢复。输入包名以确认：</string>
+    <string name="manage_disable_failed">停用失败</string>
+    <string name="manage_force_stop_failed">强制停止失败</string>
+    <string name="manage_process_present">检测到运行进程</string>
+    <string name="manage_process_absent">未检测到运行进程</string>
+    <string name="manage_process_unknown">暂无法确认运行状态</string>
     <string name="manage_failed">系统没有执行这个操作</string>
     <string name="settings_allow_remove">允许移除预装应用</string>
     <string name="apps_filter_disabled">已停用</string>
@@ -509,7 +516,7 @@
     <string name="risk_listed">其他应用或系统功能依赖它（例如推送、应用商店、通话、数据存储）。停用或移除后，这些功能可能失效，部分应用可能闪退。</string>
     <string name="risk_background">这是没有桌面图标的预装组件，通常在后台支撑手机的某项功能。停用或移除后，相关功能可能异常。</string>
     <string name="risk_acknowledge">我了解风险，仍要继续</string>
-    <string name="risk_note">手机依赖它运行，改动前会先提示风险。</string>
+    <string name="risk_note">手机依赖此应用，改动它可能影响系统功能。</string>
     <string name="remove_hint">要移除预装应用，请先在「设置 › 高级」中允许。</string>
     <string name="settings_allow_remove_desc">为当前用户移除手机自带的应用，数据保留，可在「应用 › 已删除」里恢复。</string>
     <string name="allow_remove_title">允许移除预装应用？</string>
